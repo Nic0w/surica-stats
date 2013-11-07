@@ -37,25 +37,28 @@ int store(FILE *logfile, sqlite3 *database) {
 
 	int dump_count = 0;
 	int line_count = 0;
-
-	char *insert = malloc(256);
-	char *values = malloc(128);
-	char *plop = NULL;
 	
 	int malloc_size = 128;
 	
 	int diff = 0;
 	
 
-	int first = 0;
+	int first = 1;
 	int run_timestamp=0, uptime=0, last_uptime = 0, last_timestamp = 0;
 
 	char *err_msg;
+	
+	 int nb_rq = 0;
+
+	char *insert = malloc(128);
+	char *values = malloc(128);
+	sprintf(insert, "INSERT INTO log_line VALUES ");
+
 
 	sqlite3_exec(database, "PRAGMA synchronous = OFF", NULL, NULL, &err_msg);
 
 	while(getline(&logline, &buff_size, logfile) > 0) {
-	
+
 		if(strstr(logline, "----") == logline) 
 			continue; //we ignore lines starting by '----'
 
@@ -68,15 +71,9 @@ int store(FILE *logfile, sqlite3 *database) {
 
 				dump_count++;
 
-				if(sqlite3_exec(database, "COMMIT TRANSACTION", NULL, NULL, &err_msg) != SQLITE_OK) {
-
-					printf("Error while commiting data : %s\n", err_msg);
-					free(insert);
-				}
-
 				last_timestamp = run_timestamp;
 				last_uptime = uptime;
-				nb_line = 0;
+
 			}
 			
 
@@ -90,19 +87,13 @@ int store(FILE *logfile, sqlite3 *database) {
 			
 		 	if(uptime < last_uptime) { //new run
 
-				//printf("Dumps treated : %d\n", dump_count);
-
-				//printf("New run detected ! (%d)\n", run_timestamp);
-				
-				//dump_count=0;
-
 				nb_run++;
 			}
 
+			continue;
+		}
 
-			first = 1;
-
-//			printf("New dump detected : t=%d, u=%d\n", run_timestamp, uptime);
+		if(nb_line == 500) {
 
 			if(sqlite3_exec(database, "BEGIN TRANSACTION", NULL, NULL, &err_msg) != SQLITE_OK) {
 
@@ -110,18 +101,34 @@ int store(FILE *logfile, sqlite3 *database) {
 				free(insert);
 			}
 
-			continue;
+			if(sqlite3_exec(database, insert, NULL, NULL, &err_msg) != SQLITE_OK) {
+
+			printf("Error while inserting data : %s\n", err_msg);
+			printf("%s\n", insert);			
+
+			//
+			}
+
+
+			if(sqlite3_exec(database, "COMMIT TRANSACTION", NULL, NULL, &err_msg) != SQLITE_OK) {
+
+					printf("Error while commiting data : %s\n", err_msg);
+					free(insert);
+				}
+
+			free(insert);
+			insert = malloc(128);
+			sprintf(insert, "INSERT INTO log_line VALUES ");
+
+			nb_rq++;
+			first = 1;
+			nb_line = 0;
 		}
-	
-		nb_line++;
-		line_count++;
-		
 
 		line = sscanf(logline, DUMP_COUNT_FRMT, &counter_name, &thread_name, &packet_count);
 
-		//printf("nb_run");
-
-		sprintf(insert, "INSERT INTO log_line VALUES (%d, %d, '%s', '%s', %lli);", 
+		sprintf(values, "%s(%d, %d, '%s', '%s', %lli)", 
+			first ? "" : ", ",
 			nb_run, 
 			uptime, 
 			counter_name, 
@@ -129,12 +136,30 @@ int store(FILE *logfile, sqlite3 *database) {
 			packet_count
 		);
 
+		first = 0;
+		
+		insert = realloc(insert, 128 + nb_line*128);
+		strcat(insert, values);
+
+		line_count++;
+		nb_line++;
+	}
+
+	if(nb_line != 0) {
+
+		//printf("Treated %d before last request; last request is for %d lines.\n", nb_rq*500, nb_line );
 		if(sqlite3_exec(database, insert, NULL, NULL, &err_msg) != SQLITE_OK) {
 
 			printf("Error while inserting data : %s\n", err_msg);
-			//free(insert);
-		}
+			printf("%s\n", insert);			
+
+			//
+			}
+
+			free(insert);
+			nb_rq++;
 	}
+	printf("Inserts in database : %d\n", nb_rq);
 
 	printf("Treated %d run(s) in %d dumps (%d lines).\n", nb_run+1, dump_count+1, line_count);
 	

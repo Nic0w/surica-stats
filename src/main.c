@@ -6,6 +6,8 @@
 #include <time.h>
 #include <sqlite3.h>
 
+#include "parser.h"
+#include "init_db.h"
 
 #define MAX_FILENAME_SIZE 256
 
@@ -22,7 +24,7 @@ int main(int argc, char *argv[]) {
 
 	int create = 0, delete=0, record = 0, stats = 0;
 
-	while((opt = getopt(argc, argv, "hcdus")) != -1) {
+	while((opt = getopt(argc, argv, "hcdrs")) != -1) {
 	
 		switch(opt) {
 

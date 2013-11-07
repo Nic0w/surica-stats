@@ -1,5 +1,5 @@
-SOURCE_FILES = main
-OBJECT_FILES = main.o
+SOURCE_FILES = main parser init_db
+OBJECT_FILES = main.o parser.o init_db.o
 
 .PHONY: objects $(SOURCE_FILES)
 
