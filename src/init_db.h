@@ -13,5 +13,11 @@
 				\"packet_count\" INTEGER \
 			);"
 
+#define RUN_TABLE "CREATE TABLE \"run\" ( \
+		\"run_id\" INTEGER, \
+    		\"start_time\" INTEGER, \
+    		\"duration\" INTEGER \
+	);"
+
 
 int init_database(sqlite3 *database);

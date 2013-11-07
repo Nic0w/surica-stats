@@ -50,6 +50,7 @@ int store(FILE *logfile, sqlite3 *database) {
 	
 	 int nb_rq = 0;
 
+	char *run_insert = malloc(128);
 	char *insert = malloc(128);
 	char *values = malloc(128);
 	sprintf(insert, "INSERT INTO log_line VALUES ");
@@ -85,7 +86,17 @@ int store(FILE *logfile, sqlite3 *database) {
 
 			uptime = (up_days DAY) + (up_hours HOUR) + (up_mins MINUTE) + (up_sec SEC);
 			
-		 	if(uptime < last_uptime) { //new run
+		 	if(uptime < last_uptime) { //We just detected a new run
+
+				sprintf(run_insert, "INSERT INTO run VALUES (%d, %d, %d)", 
+							nb_run, last_timestamp - last_uptime, last_uptime);
+
+				if(sqlite3_exec(database, run_insert, NULL, NULL, &err_msg) != SQLITE_OK) {
+
+					printf("Error while inserting new run : %s\n", err_msg);
+					//printf("%s\n", insert);			
+				}
+
 
 				nb_run++;
 			}
@@ -95,26 +106,11 @@ int store(FILE *logfile, sqlite3 *database) {
 
 		if(nb_line == 500) {
 
-			if(sqlite3_exec(database, "BEGIN TRANSACTION", NULL, NULL, &err_msg) != SQLITE_OK) {
-
-				printf("Error begin : %s\n", err_msg);
-				free(insert);
-			}
-
 			if(sqlite3_exec(database, insert, NULL, NULL, &err_msg) != SQLITE_OK) {
 
-			printf("Error while inserting data : %s\n", err_msg);
-			printf("%s\n", insert);			
-
-			//
+				printf("Error while inserting data : %s\n", err_msg);
+				//printf("%s\n", insert);			
 			}
-
-
-			if(sqlite3_exec(database, "COMMIT TRANSACTION", NULL, NULL, &err_msg) != SQLITE_OK) {
-
-					printf("Error while commiting data : %s\n", err_msg);
-					free(insert);
-				}
 
 			free(insert);
 			insert = malloc(128);
@@ -159,6 +155,20 @@ int store(FILE *logfile, sqlite3 *database) {
 			free(insert);
 			nb_rq++;
 	}
+
+	sprintf(run_insert, "INSERT INTO run VALUES (%d, %d, %d)", 
+					nb_run, last_timestamp - last_uptime, last_uptime);
+
+	if(sqlite3_exec(database, run_insert, NULL, NULL, &err_msg) != SQLITE_OK) { //inserting last run
+
+		printf("Error while inserting new run : %s\n", err_msg);
+		//printf("%s\n", insert);			
+	}
+
+
+	free(values);
+	free(run_insert);
+
 	printf("Inserts in database : %d\n", nb_rq);
 
 	printf("Treated %d run(s) in %d dumps (%d lines).\n", nb_run+1, dump_count+1, line_count);
