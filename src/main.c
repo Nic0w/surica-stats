@@ -71,7 +71,10 @@ int main(int argc, char *argv[]) {
 				//return 0;			
 		}
 		
-	}	
+	}
+
+	if(argc==1)
+		return;
 
 	strncpy(db_name, argv[optind++], MAX_FILENAME_SIZE);
 

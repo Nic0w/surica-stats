@@ -1,6 +1,7 @@
 #include "stats.h"
 
-struct logline *add_log_line(struct logline *last_line, int run, int uptime, char *counter, char *thread, long long int packet_count) {
+struct logline *add_log_line(struct logline *last_line, 
+	int run, int uptime, const unsigned char *counter, const unsigned char *thread, long long int packet_count) {
 
 	struct logline *new = malloc(sizeof(struct logline));
 
@@ -159,49 +160,9 @@ void print_stats(sqlite3 *database, struct logline * lines) {
 			threads = threads->next;
 		}
 		
+		free_log_line(temp_thread);
 
 	}
-
-	/*for(i = 0; i< nb_run; i++) {
-		run_stats[i] = malloc(2 * sizeof(long long int));
-
-		run_stats[i][0] = 0;
-		run_stats[i][1] = 0;
-
-		//run_uptime = atoi(runs[i][1]);
-		printf("%s\n",runs[i][1]);
-		printf("Runtime for run %d = %d\n", i, run_uptime);
-
-	}*/
-			
-
-	/*
-	int run_uptime = 0;
-	while(lines != NULL) {
-		
-		run_uptime
-			
-		//if(line->uptime != )
-
-		//printf("%d %s %s %lld (%d)\n", lines->run, lines->counter, lines->thread, lines->packet_count, counter%2);
-
-		run_stats[counter % 2][lines->run] += lines->packet_count;
-	
-		counter++;		
-
-		lines = lines->next;
-	}
-	
-
-	for(i = 0; i< nb_run; i++) {
-
-		double ratio = ((double)run_stats[0][i])/((double)run_stats[1][i]);
-	
-		printf("Drop ratio for run %d : %lf\n", ratio);
-
-		printf("Run %d; capture.kernel_packets=%lld\n", i, run_stats[1][i]);
-		printf("Run %d; capture.kernel_drops=%lld\n", i, run_stats[0][i]);
-	}*/
 
 }
 
