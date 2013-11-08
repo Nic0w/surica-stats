@@ -1,5 +1,8 @@
 #include "parser.h"
 
+/*
+Convert an human-readable date in a UNIX timestamp (seconds elapsed since January 1st 1970)
+*/
 time_t get_timestamp(int month, int day, int year, int hour, int min, int sec) {
 
 	struct tm date;
@@ -14,6 +17,9 @@ time_t get_timestamp(int month, int day, int year, int hour, int min, int sec) {
   	return mktime(&date);
 }
 
+/*
+Store a log file into the database
+*/
 int store(FILE *logfile, sqlite3 *database) {
 
 	char buff[128];
@@ -66,7 +72,7 @@ int store(FILE *logfile, sqlite3 *database) {
 		if(strstr(logline, "Counter") == logline) 
 			continue; //we ignore lines starting by 'Counter'
 
-		if(strstr(logline, "Date") == logline) {
+		if(strstr(logline, "Date") == logline) { //Line start with "Date"
 
 			if(nb_line != 0) { //we just detected a new dump
 
@@ -78,20 +84,20 @@ int store(FILE *logfile, sqlite3 *database) {
 			}
 			
 
-			new_dump = sscanf(logline, DUMP_DATE_FRMT, 
+			new_dump = sscanf(logline, DUMP_DATE_FRMT, //Parse the date and time (see parser.h)
 				&month, &day, &year, &hour, &min, &sec, 
 				&up_days, &up_hours, &up_mins, &up_sec) == 10;	
 			
 			run_timestamp = get_timestamp(month, day, year, hour, min, sec);
 
-			uptime = (up_days DAY) + (up_hours HOUR) + (up_mins MINUTE) + (up_sec SEC);
+			uptime = (up_days DAY) + (up_hours HOUR) + (up_mins MINUTE) + (up_sec SEC); //Compute uptime in seconds
 			
 		 	if(uptime < last_uptime) { //We just detected a new run
 
 				sprintf(run_insert, "INSERT INTO run VALUES (%d, %d, %d)", 
 							nb_run, last_timestamp - last_uptime, last_uptime);
 
-				if(sqlite3_exec(database, run_insert, NULL, NULL, &err_msg) != SQLITE_OK) {
+				if(sqlite3_exec(database, run_insert, NULL, NULL, &err_msg) != SQLITE_OK) { //Insert a new run in db
 
 					printf("Error while inserting new run : %s\n", err_msg);
 					//printf("%s\n", insert);			
@@ -104,27 +110,28 @@ int store(FILE *logfile, sqlite3 *database) {
 			continue;
 		}
 
-		if(nb_line == 500) {
+		if(nb_line == 500) { //If we parsed 500 lines
 
-			if(sqlite3_exec(database, insert, NULL, NULL, &err_msg) != SQLITE_OK) {
+			if(sqlite3_exec(database, insert, NULL, NULL, &err_msg) != SQLITE_OK) {//Do the INSERT
 
 				printf("Error while inserting data : %s\n", err_msg);
 				//printf("%s\n", insert);			
 			}
 
+			//Reinit INSERT statement
 			free(insert);
 			insert = malloc(128);
 			sprintf(insert, "INSERT INTO log_line VALUES ");
 
-			nb_rq++;
-			first = 1;
+			nb_rq++; //Request count
+			first = 1; //First line flag
 			nb_line = 0;
 		}
 
-		line = sscanf(logline, DUMP_COUNT_FRMT, &counter_name, &thread_name, &packet_count);
+		line = sscanf(logline, DUMP_COUNT_FRMT, &counter_name, &thread_name, &packet_count);//Parse a line of log (see parser.h)
 
 		sprintf(values, "%s(%d, %d, '%s', '%s', %lli)", 
-			first ? "" : ", ",
+			first ? "" : ", ", //if it's the first line of values, don't put a comma.
 			nb_run, 
 			uptime, 
 			counter_name, 
@@ -134,6 +141,7 @@ int store(FILE *logfile, sqlite3 *database) {
 
 		first = 0;
 		
+		//Append generated values to INSERT
 		insert = realloc(insert, 128 + nb_line*128);
 		strcat(insert, values);
 
@@ -141,6 +149,7 @@ int store(FILE *logfile, sqlite3 *database) {
 		nb_line++;
 	}
 
+	//Treat the remaining lines
 	if(nb_line != 0) {
 
 		//printf("Treated %d before last request; last request is for %d lines.\n", nb_rq*500, nb_line );
@@ -149,13 +158,13 @@ int store(FILE *logfile, sqlite3 *database) {
 			printf("Error while inserting data : %s\n", err_msg);
 			printf("%s\n", insert);			
 
-			//
-			}
+		}
 
 			free(insert);
 			nb_rq++;
 	}
 
+	//Insert last run
 	sprintf(run_insert, "INSERT INTO run VALUES (%d, %d, %d)", 
 					nb_run, run_timestamp - uptime, uptime);
 
