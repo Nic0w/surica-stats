@@ -157,7 +157,7 @@ int store(FILE *logfile, sqlite3 *database) {
 	}
 
 	sprintf(run_insert, "INSERT INTO run VALUES (%d, %d, %d)", 
-					nb_run, last_timestamp - last_uptime, last_uptime);
+					nb_run, run_timestamp - uptime, uptime);
 
 	if(sqlite3_exec(database, run_insert, NULL, NULL, &err_msg) != SQLITE_OK) { //inserting last run
 

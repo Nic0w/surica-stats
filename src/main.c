@@ -8,6 +8,7 @@
 
 #include "parser.h"
 #include "init_db.h"
+#include "stats.h"
 
 #define MAX_FILENAME_SIZE 256
 
@@ -116,7 +117,11 @@ int main(int argc, char *argv[]) {
 
 	if(stats) {
 
+		struct logline *loglines = build_logline_list(database);
 
+		print_stats(database, loglines);
+
+		free_log_line(loglines);
 
 	}
 
